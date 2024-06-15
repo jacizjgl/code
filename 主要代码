@@ -1,0 +1,59 @@
+import csv
+import time
+import random
+
+import requests
+import parsel  # 筛选数据
+
+csv_qczj = open('qczj.csv', mode='a', encoding='gbk', newline='')
+csv_writer = csv.writer(csv_qczj)
+
+headers = {
+    'Cookie': 'fvlid=1682595523507e1VxqlUKcprh; sessionid=78c79944-9994-4144-8c0e-2af41bb0e33c; '
+              'sessionip=118.212.92.223; area=360702; Hm_lvt_d381ec2f88158113b9b76f14c497ed48=1682595524; '
+              'href=http%3A%2F%2Fwww.che168.com%2F; accessId=7a783820-ec84-11ec-b95f-79694d4df285; '
+              'che_sessionid=AA4A8669-120B-4607-8BD2-4D66AE988B28%7C%7C2023-04-27+19%3A38%3A42.568%7C%7C0; '
+              'carDownPrice=1; pageViewNum=5; listuserarea=0; sessionvisit=bbd29cd5-88cc-4660-9457-ecf7ae500b00; '
+              'sessionvisitInfo=78c79944-9994-4144-8c0e-2af41bb0e33c|www.che168.com|100943; '
+              'che_sessionvid=BE3F1991-DEE4-4370-B178-3FF930B8BF27; sessionuid=78c79944-9994-4144-8c0e-2af41bb0e33c; '
+              'userarea=510100; ahpvno=25; UsedCarBrowseHistory=0%3A47352637%2C0%3A47861073%2C0%3A47687717; '
+              'showNum=25; Hm_lpvt_d381ec2f88158113b9b76f14c497ed48=1682606210; '
+              'ahuuid=C483E9CF-14B0-4BAB-B984-4734557598E5; v_no=24; '
+              'visit_info_ad=AA4A8669-120B-4607-8BD2-4D66AE988B28||BE3F1991-DEE4-4370-B178-3FF930B8BF27||-1||-1||24; '
+              'che_ref=0%7C0%7C0%7C0%7C2023-04-27+22%3A36%3A49.225%7C2023-04-27+19%3A38%3A42.568',
+    'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) '
+                  'Chrome/112.0.0.0 Safari/537.36 Edg/112.0.1722.58'}
+# for循环爬取页面
+for page in range(0, 20):
+    print(f'-------------------------正在爬取第{page}页-------------------------')
+    url = f'https://www.che168.com/china/a0_0msdgscncgpi1ltocsp{page}exx0/#pvareaid=100943'  # 全国
+    # 1.发送请求
+    response = requests.get(url, headers=headers)
+    # <Response [200]>:请求成功
+    # 2.获取数据，网页源代码
+    data_html = response.text
+    # print(response.text)
+    # 3.解析数据  xpath   re  css  bs4
+    selector = parsel.Selector(data_html)
+    lis = selector.css('.viewlist_ul li')  # 筛选提取
+    # print(lis2.get())
+    for li in lis:
+        # 有些数据为空，需要跳过  try 和 except
+        try:
+            # ::text提取标签文本内容
+            car_name = li.css('.card-name::text').get()  # 车名
+            car_info = li.css('.cards-unit::text').get()  # 车信息
+            # 列表本身没有那么多元素  容易超出了范围   左斜杠是中文格式的
+            kmNumber = car_info.split('／')[0]  # 去掉空格
+            year = car_info.split('／')[1]
+            city = car_info.split('／')[2]+"市"
+            business = car_info.split('／')[3]
+            now_price = li.css('.pirce em::text').get()+"万"  # 现价
+            origin_price = li.css('s::text').get()  # 原价
+            # carinfo = li.css('.carinfo::attr(href)').get()  # 车的图片
+            print(car_name, kmNumber, year, city, business, now_price, origin_price)
+            # 4.保存数据
+            csv_writer.writerow([car_name, kmNumber, year, city, business, now_price, origin_price])
+        except:
+            pass
+    time.sleep(random.randint(3, 4))
